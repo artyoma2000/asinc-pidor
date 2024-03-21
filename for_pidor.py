@@ -77,7 +77,7 @@ def choose_winner():
             last_timestamp = last_timestamp_str[0]
             today = datetime.now()
 
-            if last_timestamp.date() <= today.date():
+            if last_timestamp.date() == today.date():
                 return 'Сегодня уже выбран пидор дня. Скорые выехали зря.'
 
         if choice([True, False]):
