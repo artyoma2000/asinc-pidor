@@ -1,6 +1,4 @@
 .env
-migrations_old/migrate_pidorlist.py
-migrations_old/migrate_winners.py
 venv
 .idea
 chat.db
