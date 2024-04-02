@@ -5,7 +5,7 @@ import random
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from bot_prases import random_element
+from botfiles.bot_prases import random_element
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -47,56 +47,62 @@ text = [['Это просто ВОСХИТИТЕЛЬНО! Я ещё никогд
          'Что же с нами стало...',
          'Я в опасности, системы повреждены смертельной дозой кринжа!']]
 
-USER_IDS = ["@Vlados_9606", "@holyskot4", '@sokol347', '@rusak_set', '@xeniaos', '@dzennicherotzakroi', 'Роман, без '
-                                                                                                        'ника в телеге']
-
 router = Router()
 
 Base = declarative_base()
 
-engine = create_engine('sqlite:///bot.db', echo=True)
-Session = sessionmaker(bind=engine)
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+    id_chat = Column(Integer, primary_key=True)
+    chat_id = Column(Integer)
+    usernames = Column(String)
 
 
 class Winner(Base):
     __tablename__ = 'winners'
-
-    id = Column(Integer, primary_key=True)
+    id_Winner = Column(Integer, primary_key=True)
     winner_id = Column(String)
+    chat_id = Column(Integer)
     timestamp = Column(DateTime)
+
+
+engine = create_engine('sqlite:///chat.db')
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
 
 
 def create_database():
     Base.metadata.create_all(engine)
 
 
-def choose_winner():
+def choose_winner(message, USER_IDS):
     with Session() as session:
         last_timestamp_str = session.query(Winner.timestamp).order_by(Winner.timestamp.desc()).first()
         if last_timestamp_str:
             last_timestamp = last_timestamp_str[0]
             today = datetime.now()
 
-            if last_timestamp.date() == today.date():
-                return 'Сегодня уже выбран пидор дня. Скорые выехали зря.'
+            # if last_timestamp.date() == today.date():
+            #    return 'Сегодня уже выбран пидор дня. Скорые выехали зря.'
 
-        if choice([True, False]):
-            winner_id = USER_IDS[0]  # Select first element with 50% probability
-        else:
-            winner_id = choice(USER_IDS[1:])  # Select randomly from rest of the list
+        winner_id = choice(USER_IDS)  # Select randomly from rest of the list
         timestamp = datetime.now()
-
-        new_winner = Winner(winner_id=winner_id, timestamp=timestamp)
+        new_winner = Winner(winner_id=winner_id, chat_id=message.chat.id, timestamp=timestamp)
         session.add(new_winner)
         session.commit()
 
-        return f'{random_element()} {winner_id}'
+        return f'{random_element()} @{winner_id}'
 
 
 @router.message(Command("pidor"))
 async def cmd_start(message: Message):
     create_database()
-    k = choose_winner()
+    USER_IDS = session.query(ChatMessage).filter_by(chat_id=message.chat.id).all()
+    USER_IDS_list = [participant.usernames for participant in USER_IDS]
+    print(USER_IDS_list)
+    k = choose_winner(message, USER_IDS_list)
     if k != 'Сегодня уже выбран пидор дня. Скорые выехали зря.':
         for i in text:
             await message.answer(
